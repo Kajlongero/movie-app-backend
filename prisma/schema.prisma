@@ -12,3 +12,166 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum MEDIA_TYPE {
+  TV
+  MOVIE
+}
+
+enum EPISODE_TYPE {
+  STANDARD
+  FINALE
+}
+
+enum REVIEW_COMMENTS_ACTION_TYPE {
+  EDITED
+  DELETED
+}
+
+model Auth {
+  id                            String         @id @default(uuid())
+  email                         String         @unique @db.VarChar(75)
+  password                      String         @db.VarChar(120)
+  confirmed                     Boolean        @default(false)
+  loginAttempts                 Int            @default(0)
+  confirmAttempts               Int            @default(1)
+  recoveryPasswordAttempts      Int            @default(0)
+  timeToLoginAgain              DateTime?
+  timeToRequestConfirmAgain     DateTime?      @map("time_to_request_confirm_again")
+  timeToRequestPasswordRecovery DateTime?      @map("time_to_request_password_recovery")
+  createdAt                     DateTime       @default(now()) @map("created_at")
+  updatedAt                     DateTime       @updatedAt @map("updated_at")
+  Users                         Users[]
+  AuthConfirm                   AuthConfirm[]
+  AuthRecovery                  AuthRecovery[]
+}
+
+model AuthConfirm {
+  id        String   @id @default(uuid())
+  code      Int
+  attempts  Int      @default(0)
+  valid     Boolean  @default(true)
+  lifetime  DateTime
+  createdAt DateTime @default(now())
+  authId    String
+  Auth      Auth     @relation(fields: [authId], references: [id])
+}
+
+model AuthRecovery {
+  id                   String   @id @default(uuid())
+  code                 Int
+  attempts             Int      @default(0)
+  recoveryToken        String   @map("recovery_token")
+  authorizeChangeToken String   @map("authorize_change_token")
+  valid                Boolean  @default(true)
+  lifetime             DateTime
+  createdAt            DateTime @default(now())
+  authId               String
+  Auth                 Auth     @relation(fields: [authId], references: [id])
+}
+
+model Users {
+  id                    String                  @id @default(uuid())
+  firstName             String?                 @map("first_name")
+  lastName              String?                 @map("last_name")
+  authId                String
+  auth                  Auth                    @relation(fields: [authId], references: [id])
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  CommentsReview        CommentsReview[]
+  CommentsReviewHistory CommentsReviewHistory[]
+  ChatMessage           ChatMessage[]
+}
+
+model Films {
+  id             Int              @id @default(autoincrement())
+  title          String
+  language       String
+  overview       String
+  mediaType      MEDIA_TYPE       @map("media_type")
+  popularity     Float            @default(0.00)
+  voteAverage    Float            @default(0.00)
+  voteCount      Int              @default(0)
+  releaseDate    DateTime
+  Seasons        Seasons[]
+  Categories     Categories[]
+  CommentsReview CommentsReview[]
+}
+
+model Seasons {
+  id           Int        @id @default(autoincrement())
+  seasonNumber Int        @map("season_number")
+  episodeCount Int        @map("episode_count")
+  voteCount    Int        @default(0) @map("vote_count")
+  filmId       Int
+  voteAverage  Float      @default(0.00) @map("vote_average")
+  name         String
+  overview     String
+  mediaType    MEDIA_TYPE @map("media_type")
+  airDate      DateTime   @map("air_date")
+  Film         Films      @relation(fields: [filmId], references: [id])
+  Episodes     Episodes[]
+}
+
+model Episodes {
+  id           Int          @id @default(autoincrement())
+  seasonNumber Int          @map("season_number")
+  runtime      Int          @default(0)
+  voteCount    Int          @default(0) @map("vote_count")
+  seasonId     Int          @map("season_id")
+  voteAverage  Float        @default(0.00) @map("vote_average")
+  name         String
+  overview     String
+  episodeType  EPISODE_TYPE @default(STANDARD) @map("episode_type")
+  airDate      DateTime     @map("air_date")
+  Season       Seasons      @relation(fields: [seasonId], references: [id])
+}
+
+model CommentsReview {
+  id                    Int                     @id @default(autoincrement())
+  score                 Int
+  filmId                Int                     @map("film_id")
+  content               String                  @db.VarChar(300)
+  userId                String                  @map("user_id")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+  Film                  Films                   @relation(fields: [filmId], references: [id])
+  User                  Users                   @relation(fields: [userId], references: [id])
+  CommentsReviewHistory CommentsReviewHistory[]
+}
+
+model CommentsReviewHistory {
+  id        Int            @id @default(autoincrement())
+  score     Int
+  commentId Int            @map("comment_id")
+  content   String         @db.VarChar(300)
+  userId    String         @map("user_id")
+  Comment   CommentsReview @relation(fields: [commentId], references: [id])
+  User      Users          @relation(fields: [userId], references: [id])
+}
+
+model Categories {
+  id   Int     @id @default(autoincrement())
+  name String
+  Film Films[]
+  Chat Chat[]
+}
+
+model Chat {
+  id          String        @id @default(uuid())
+  name        String
+  categoryId  Int           @unique @map("category_id")
+  Category    Categories    @relation(fields: [categoryId], references: [id])
+  ChatMessage ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chatId    String   @map("chat_id")
+  userId    String   @map("user_id")
+  Chat      Chat     @relation(fields: [chatId], references: [id])
+  User      Users    @relation(fields: [userId], references: [id])
+}
