@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const handleFetch = async (url, method = "GET") => {
+const handleApiFetch = async (url, method = "GET") => {
   const response = await fetch(url, {
     method: method,
     headers: {
@@ -13,4 +13,6 @@ const handleFetch = async (url, method = "GET") => {
   return result;
 };
 
-module.exports = handleFetch;
+module.exports = {
+  handleApiFetch,
+};

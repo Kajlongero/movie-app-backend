@@ -6,6 +6,7 @@ const {
 } = require("../responses/success.responses");
 const authService = require("../services/auth.service");
 const validateSchema = require("../middlewares/validate.schema");
+const validateIdParams = require("../middlewares/validate.id.params");
 const {
   createUserSchema,
   loginSchema,
@@ -21,7 +22,6 @@ router.get(
   async (req, res, next) => {
     try {
       const user = req.user;
-
       const data = await authService.getUserById(user.uid);
 
       delete data.auth.password;
@@ -33,7 +33,7 @@ router.get(
   }
 );
 
-router.get("/user-by-id/:id", async (req, res, next) => {
+router.get("/user-by-id/:id", validateIdParams, async (req, res, next) => {
   try {
     const { id } = req.params;
 

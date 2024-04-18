@@ -21,10 +21,10 @@ class AuthService {
     return verify(token, SERVER_CONFIGS.JWT_SECRET);
   }
 
-  async getUserById(data) {
+  async getUserById(id) {
     const user = await prisma.users.findUnique({
       where: {
-        id: data,
+        id: id,
       },
       select: {
         id: true,

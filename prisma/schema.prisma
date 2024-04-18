@@ -74,7 +74,7 @@ model Users {
   id                    String                  @id @default(uuid())
   firstName             String?                 @map("first_name")
   lastName              String?                 @map("last_name")
-  authId                String
+  authId                String                  @map("auth_id")
   auth                  Auth                    @relation(fields: [authId], references: [id])
   createdAt             DateTime                @default(now()) @map("created_at")
   updatedAt             DateTime                @updatedAt @map("updated_at")
@@ -88,26 +88,41 @@ model Films {
   title          String
   language       String
   overview       String
+  coverImage     String           @map("cover_image")
   mediaType      MEDIA_TYPE       @map("media_type")
   popularity     Float            @default(0.00)
-  voteAverage    Float            @default(0.00)
-  voteCount      Int              @default(0)
-  releaseDate    DateTime
+  voteAverage    Float            @default(0.00) @map("vote_average")
+  voteCount      Int              @default(0) @map("vote_count")
+  releaseDate    DateTime         @map("release_date")
   Seasons        Seasons[]
   Categories     Categories[]
   CommentsReview CommentsReview[]
+  FilmImages     FilmImages[]
+}
+
+model FilmImages {
+  id     Int    @id @default(autoincrement())
+  url    String
+  filmId Int    @map("film_id")
+  Film   Films  @relation(fields: [filmId], references: [id])
+}
+
+model Categories {
+  id    Int     @id @default(autoincrement())
+  name  String
+  Films Films[]
 }
 
 model Seasons {
   id           Int        @id @default(autoincrement())
   seasonNumber Int        @map("season_number")
   episodeCount Int        @map("episode_count")
+  coverImage   String     @map("cover_image")
   voteCount    Int        @default(0) @map("vote_count")
-  filmId       Int
+  filmId       Int        @map("film_id")
   voteAverage  Float      @default(0.00) @map("vote_average")
   name         String
   overview     String
-  mediaType    MEDIA_TYPE @map("media_type")
   airDate      DateTime   @map("air_date")
   Film         Films      @relation(fields: [filmId], references: [id])
   Episodes     Episodes[]
@@ -131,8 +146,8 @@ model CommentsReview {
   id                    Int                     @id @default(autoincrement())
   score                 Int
   filmId                Int                     @map("film_id")
-  content               String                  @db.VarChar(300)
   userId                String                  @map("user_id")
+  content               String                  @db.VarChar(300)
   createdAt             DateTime                @default(now()) @map("created_at")
   updatedAt             DateTime                @updatedAt @map("updated_at")
   Film                  Films                   @relation(fields: [filmId], references: [id])
@@ -143,25 +158,17 @@ model CommentsReview {
 model CommentsReviewHistory {
   id        Int            @id @default(autoincrement())
   score     Int
-  commentId Int            @map("comment_id")
   content   String         @db.VarChar(300)
   userId    String         @map("user_id")
+  commentId Int            @map("comment_id")
   Comment   CommentsReview @relation(fields: [commentId], references: [id])
   User      Users          @relation(fields: [userId], references: [id])
-}
-
-model Categories {
-  id   Int     @id @default(autoincrement())
-  name String
-  Film Films[]
-  Chat Chat[]
+  createdAt DateTime       @default(now()) @map("created_at")
 }
 
 model Chat {
   id          String        @id @default(uuid())
   name        String
-  categoryId  Int           @unique @map("category_id")
-  Category    Categories    @relation(fields: [categoryId], references: [id])
   ChatMessage ChatMessage[]
 }
 
