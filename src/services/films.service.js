@@ -8,6 +8,7 @@ const {
   SERIES_BY_CATEGORY_API,
   SEARCH_MOVIE_SERIE_BY_TITLE_API,
   IMAGES_MOVIE_SERIE_API,
+  TRENDING_MOVIE_SERIES_API,
   MOVIES_SERIES_BY_CATEGORY_API,
 } = require("../utils/api.routes");
 
@@ -81,6 +82,7 @@ class FilmsService {
       include: {
         Categories: true,
         FilmImages: true,
+        CommentsReview: true,
       },
     });
     if (serie) return serie;
@@ -93,7 +95,7 @@ class FilmsService {
         "GET"
       );
 
-    if (!serie && apiSerie) throw new notFound("Serie not found");
+    if (!serie && !apiSerie) throw new notFound("Serie not found");
 
     const images = await handleApiFetch(
       IMAGES_MOVIE_SERIE_API("tv", serieId),
@@ -109,7 +111,8 @@ class FilmsService {
       data: {
         id: apiSerie.id,
         title: apiSerie.name,
-        language: apiSerie.languages ?? apiSerie.languages[0] ?? "en",
+        language: apiSerie.original_language ?? "en",
+        coverImage: apiSerie.poster_path,
         mediaType: "TV",
         overview: apiSerie.overview,
         releaseDate: date,
@@ -150,7 +153,6 @@ class FilmsService {
     });
 
     return createSerie;
-    n;
   }
 
   async getFilmsByCategory(type = "movie", categoryId, page = 1) {
@@ -158,6 +160,15 @@ class FilmsService {
       type === "movie"
         ? await handleApiFetch(MOVIES_BY_CATEGORY_API(categoryId, page))
         : await handleApiFetch(SERIES_BY_CATEGORY_API(categoryId, page));
+
+    return movies;
+  }
+
+  async getFilmsByTrending(window = "day") {
+    const movies = await handleApiFetch(
+      `${TRENDING_MOVIE_SERIES_API}${window}`,
+      "GET"
+    );
 
     return movies;
   }
@@ -173,68 +184,34 @@ class FilmsService {
   }
 
   async searchFilms(querys) {
-    const { a, c, s, t, p, dt, score } = querys;
+    const { s, p } = querys;
 
-    const cats = c ? c.split(",") : null;
+    if (!s.length)
+      return {
+        page: 1,
+        results: [],
+        total_pages: 0,
+        total_results: 0,
+      };
 
-    // si a (attempts) es mayor a 3, y hay search query, entonces se pide a la API externa la data
-    // incluso si se eligieron también categorías nomás se buscará por search query
-    // dado que la API externa no tiene soporte para buscar por nombre y categorías, o es una o ninguna
-    // pero si permite filtrar por query search y año
-    if (a > 3 && s) {
-      const apiSearch = await handleApiFetch(
-        `${SEARCH_MOVIE_SERIE_BY_TITLE_API(t ?? "movie", s ?? "", p ?? 1)}${
-          dt && t === "movie" ? `&primary_release_year=${dt}` : ""
-        }${dt && t === "tv" ? `&first_air_date_year=${dt}` : ""}`,
-        "GET"
-      );
+    const query = SEARCH_MOVIE_SERIE_BY_TITLE_API(s, p);
+    const movies = await handleApiFetch(query, "GET");
 
-      return apiSearch;
-    }
-
-    // si a (attempts) es mayor a 3, y hay categorías, entonces se pide a la API externa la data
-    // este endpoint solamente soporta generos (categorías), año y promedio de votos, mientras que el anterior solo
-    // titulo y año
-    if (a > 3 && c) {
-      const apiSearch = await handleApiFetch(
-        `${MOVIES_SERIES_BY_CATEGORY_API(p ?? 1, t ?? "movie")}${
-          c.length ? `&with_genres=${c}` : ""
-        }${dt && t === "movie" ? `&primary_release_year=${dt}` : ""}${
-          dt && t === "tv" ? `&first_air_date_year=${dt}` : ""
-        }${score ? `&vote_average.gte=${score}` : ""}`,
-        "GET"
-      );
-
-      return apiSearch;
-    }
-
-    const dtExist = new Date(dt, 0, 1);
-    const isoDt = dtExist.toISOString();
-
-    const movies = await prisma.films.findMany({
-      where: {
-        OR: [
-          { title: { contains: s } }, // Search by title if provided
-          { title: { eq: "" } }, // Always match if no title is provided
-        ],
-        AND: [
-          categories.length > 0
-            ? {
-                // Check if categories array is not empty
-                Categories: {
-                  some: {
-                    name: { in: cats },
-                  },
-                },
-              }
-            : {}, // Empty object if no categories are provided
-          dt ? { releaseDate: { lte: isoDt } } : {}, // Check if releaseDate is provided
-          score ? { voteAverage: { gte: score } } : {}, // Check if voteAverage is provided
-        ],
-      },
-    });
+    console.log(movies);
 
     return movies;
+
+    return [
+      ...movies.map((m) => ({
+        id: m.id,
+        title: m.name ?? m.title,
+        overview: m.overview,
+        releaseDate: m.release_date ?? m.first_air_date,
+        mediaType: m.media_type,
+        coverImage: m.poster_path,
+        language: m.original_language,
+      })),
+    ];
   }
 
   async addNewFilmScore(filmId, comment) {

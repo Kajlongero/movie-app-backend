@@ -103,6 +103,8 @@ router.patch(
       const user = req.user;
       const body = req.body;
 
+      console.log(user, body);
+
       const updated = await authService.updateUser(user, body);
 
       SuccessMessage(req, res, updated, 200);

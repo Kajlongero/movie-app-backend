@@ -84,30 +84,30 @@ class AuthService {
   async login(data) {
     const { email, password } = data;
 
-    const findEmail = await prisma.users.findUnique({
+    const findEmail = await prisma.auth.findUnique({
       where: {
-        auth: {
-          email: email,
-        },
+        email: email,
       },
       include: {
-        auth: true,
+        Users: true,
       },
     });
     if (!findEmail) throw new unauthorized("Invalid email or password");
 
-    const canLogin = new Date().toISOString() > findEmail.auth.timeToLoginAgain;
-    if (!canLogin) throw new unauthorized("You cannot login yet");
+    const time = findEmail.timeToLoginAgain;
 
-    const comparePasswords = await compare(password, findEmail.auth.password);
+    const timeToLoginAgain = time > new Date().toISOString();
+    if (timeToLoginAgain) throw new unauthorized("You cannot login yet");
+
+    const comparePasswords = await compare(password, findEmail.password);
     if (!comparePasswords) {
-      const attempts = findEmail.auth.loginAttempts;
+      const attempts = findEmail.loginAttempts;
       const timeNow =
         attempts % 3 === 0 ? setTime((30 * 2 * attempts) / 3) : undefined;
 
       await prisma.auth.update({
         where: {
-          id: findEmail.authId,
+          id: findEmail.id,
         },
         data: {
           loginAttempts: {
@@ -122,7 +122,7 @@ class AuthService {
 
     await prisma.auth.update({
       where: {
-        id: findEmail.authId,
+        id: findEmail.id,
       },
       data: {
         loginAttempts: 0,
@@ -131,8 +131,8 @@ class AuthService {
     });
 
     return this.genJWT({
-      sub: findEmail.auth.id,
-      uid: findEmail.id,
+      sub: findEmail.id,
+      uid: findEmail.Users[0].id,
     });
   }
 
@@ -202,7 +202,9 @@ class AuthService {
         ? await compare(oldPassword, findUser.auth.password)
         : null;
 
-    if (email && newEmail) throw new conflict("Email already used");
+    if (email && newEmail && email !== findUser.auth.email)
+      throw new conflict("Email already used");
+
     if (oldPassword && newPassword && comparedPasswords !== true)
       throw new unauthorized("Old password invalid to change");
 

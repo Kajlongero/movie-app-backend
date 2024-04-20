@@ -36,8 +36,8 @@ const RECOMMENDED_MOVIE_API = (id, page = 1) =>
 const TRENDING_MOVIE_SERIES_API = `${BASE_URL}/trending/all/`;
 
 // SEARCH MOVIE OR SERIES API
-const SEARCH_MOVIE_SERIE_BY_TITLE_API = (type = "movie", query, page = 1) =>
-  `${BASE_URL}/search/${type}?query=${query}&page=${page}`;
+const SEARCH_MOVIE_SERIE_BY_TITLE_API = (query, page = 1) =>
+  `${BASE_URL}/search/multi?query=${query}&page=${page}`;
 
 const SERIES_SEASON_API = (serieId, seasonNumber) =>
   `${BASE_URL}/tv/${serieId}/season/${seasonNumber}`;

@@ -35,13 +35,27 @@ router.get(
   }
 );
 
+router.get("/trending", async (req, res, next) => {
+  try {
+    const { w } = req.query;
+    const movies = await filmsService.getFilmsByTrending(w);
+
+    SuccessBody(req, res, movies, 200);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get(
   "/search",
-  validateSchema(querySearchSchema, "query"),
+  // validateSchema(querySearchSchema, "query"),
   async (req, res, next) => {
     try {
       const querys = req.query;
+      console.log(querys);
       const search = await filmsService.searchFilms(querys);
+
+      console.log(search);
 
       SuccessBody(req, res, search, 200);
     } catch (e) {

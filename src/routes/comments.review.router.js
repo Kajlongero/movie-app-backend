@@ -49,6 +49,25 @@ router.get(
 );
 
 router.get(
+  "/user-comment-on-film/:id",
+  validateSchema(getCommentSchema, "params"),
+  passport.authenticate("jwt", { session: false }),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const comment = await commentsReviewService.getUserReviewOnFilm(
+        req.user,
+        id
+      );
+
+      SuccessBody(req, res, comment, 200);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.get(
   "/comment/history/:id",
   validateSchema(getCommentSchema, "params"),
   async (req, res, next) => {

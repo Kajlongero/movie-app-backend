@@ -5,18 +5,24 @@ const filmsService = require("./films.service");
 const { forbidden } = require("joi");
 
 class CommentsReviewService {
-  async getCommentsByFilmId(filmId, offset) {
+  async getCommentsByFilmId(filmId, offset = 0) {
     const parsed = parseInt(filmId);
     const parsedOffset = parseInt(offset);
 
     const existFilm = await filmsService.existFilm(parsed);
     if (!existFilm) throw new notFound("Film not found");
 
+    console.log(filmId);
+    console.log(parsedOffset);
+
     const getAssociated = await prisma.commentsReview.findMany({
       skip: parsedOffset ?? 0,
       take: 30,
       where: {
         filmId: parsed,
+      },
+      include: {
+        User: true,
       },
     });
 
@@ -48,6 +54,33 @@ class CommentsReviewService {
     return uniqueComment;
   }
 
+  async getUserReviewOnFilm(user, filmId) {
+    const uid = user.uid;
+    const id = parseInt(filmId);
+
+    try {
+      const uniqueComment = await prisma.commentsReview.findFirst({
+        where: {
+          AND: [
+            {
+              userId: uid,
+            },
+            {
+              filmId: id,
+            },
+          ],
+        },
+        include: {
+          User: true,
+        },
+      });
+
+      return uniqueComment;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async createCommentReview(user, data) {
     const { score, content } = data;
 
@@ -71,6 +104,9 @@ class CommentsReviewService {
         content: data.content,
         filmId: filmId,
         userId: user.uid,
+      },
+      include: {
+        User: true,
       },
     });
 
@@ -108,6 +144,9 @@ class CommentsReviewService {
             userId: user.uid,
           },
         },
+      },
+      include: {
+        User: true,
       },
     });
 
